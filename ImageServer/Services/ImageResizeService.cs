@@ -2,6 +2,7 @@
 using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Formats.Webp;
 using ImageServer.Dtos;
+using SixLabors.ImageSharp.Formats.Jpeg;
 
 namespace ImageServer.Services;
 
@@ -26,14 +27,14 @@ public class ImageResizeService(HttpClient httpClient)
             image.Mutate(x => x.Resize(queryParams.Width, queryParams.Height));
 
             var outputStream = new MemoryStream();
-            var encoder = new WebpEncoder
+            var encoder = new JpegEncoder
             {
                 Quality = queryParams.Quality
             };
-            await image.SaveAsWebpAsync(outputStream, encoder);
+            await image.SaveAsJpegAsync(outputStream, encoder);
             outputStream.Position = 0;
 
-            return Results.Stream(outputStream, "image/webp");
+            return Results.Stream(outputStream, "image/jpeg");
         }
         catch (Exception ex)
         {
