@@ -3,7 +3,7 @@
     "http": {
       "commandName": "Project",
       "launchBrowser": true,
-      "launchUrl": "resize",
+      "launchUrl": "resize?w=100&u=image-url",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },

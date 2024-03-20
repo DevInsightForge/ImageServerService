@@ -1,39 +1,46 @@
 ﻿using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
-using ImageServer.Dtos;
-using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Formats.Webp;
 
 namespace ImageServer.Services;
 
 public class ImageResizeService(HttpClient httpClient)
 {
-    public async Task<IResult> ResizeImageAsync(ImageResizeQueryDto queryParams)
+    public async Task<IResult> ResizeImageAsync(string? imageUrl, int? w, int? h, int? q)
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(queryParams.ImageUrl) || queryParams.Width <= 0 || queryParams.Height <= 0)
+            var width = w ?? 0;
+            var height = h ?? 0;
+            var quality = q ?? 0;
+
+            if (0 >= quality || quality > 100) quality = 75;
+
+            if (string.IsNullOrWhiteSpace(imageUrl) || (width <= 0 && height <= 0))
             {
                 return Results.BadRequest("Invalid parameters.");
             }
 
-            using var response = await httpClient.GetAsync(queryParams.ImageUrl);
+            using var response = await httpClient.GetAsync(imageUrl);
             if (!response.IsSuccessStatusCode)
             {
                 return Results.Problem("Failed to fetch image from URL.");
             }
 
             using var image = await Image.LoadAsync(response.Content.ReadAsStream());
-            image.Mutate(x => x.Resize(queryParams.Width, queryParams.Height));
+            image.Mutate(x => x.Resize(width, height));
 
             var outputStream = new MemoryStream();
-            var encoder = new JpegEncoder
+            var encoder = new WebpEncoder
             {
-                Quality = queryParams.Quality
+                Quality = quality,
+                SkipMetadata = true
             };
-            await image.SaveAsJpegAsync(outputStream, encoder);
+
+            await image.SaveAsWebpAsync(outputStream, encoder);
             outputStream.Position = 0;
 
-            return Results.Stream(outputStream, "image/jpeg");
+            return Results.Stream(outputStream, "image/webp");
         }
         catch (Exception ex)
         {
