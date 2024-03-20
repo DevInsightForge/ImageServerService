@@ -1,6 +1,5 @@
 ﻿using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
-using SixLabors.ImageSharp.Formats.Webp;
 using ImageServer.Dtos;
 using SixLabors.ImageSharp.Formats.Jpeg;
 
