@@ -10,33 +10,28 @@ public class ImageResizeService(HttpClient httpClient)
     {
         try
         {
-            var width = w ?? 0;
-            var height = h ?? 0;
-            var quality = q ?? 0;
+            if (string.IsNullOrWhiteSpace(imageUrl) || !Uri.IsWellFormedUriString(imageUrl, UriKind.Absolute))
+                throw new Exception("Invalid image URL.");
 
-            if (0 >= quality || quality > 100) quality = 75;
+            if (!w.HasValue && !h.HasValue)
+                throw new Exception("Invalid dimensions for resizing.");
 
-            if (string.IsNullOrWhiteSpace(imageUrl) || (width <= 0 && height <= 0))
-            {
-                return Results.BadRequest("Invalid parameters.");
-            }
+            if (q.HasValue && (q <= 0 || q > 100))
+                throw new Exception("Invalid quality value.");
 
-            using var response = await httpClient.GetAsync(imageUrl);
+            int width = w ?? 0;
+            int height = h ?? 0;
+            int quality = q ?? 75;
+
+            var response = await httpClient.GetAsync(imageUrl);
             if (!response.IsSuccessStatusCode)
-            {
-                return Results.Problem("Failed to fetch image from URL.");
-            }
+                throw new Exception("Failed to fetch image.");
 
-            using var image = await Image.LoadAsync(response.Content.ReadAsStream());
+            using var image = await Image.LoadAsync(await response.Content.ReadAsStreamAsync());
             image.Mutate(x => x.Resize(width, height));
 
             var outputStream = new MemoryStream();
-            var encoder = new WebpEncoder
-            {
-                Quality = quality,
-                SkipMetadata = true
-            };
-
+            var encoder = new WebpEncoder { Quality = Math.Clamp(quality, 1, 100), SkipMetadata = true };
             await image.SaveAsWebpAsync(outputStream, encoder);
             outputStream.Position = 0;
 
