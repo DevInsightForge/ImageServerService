@@ -1,6 +1,7 @@
 ﻿using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Formats.Webp;
+using System.Net;
 
 namespace ImageServer.Services;
 
@@ -39,7 +40,10 @@ public class ImageResizeService(HttpClient httpClient)
         }
         catch (Exception ex)
         {
-            return Results.Problem(ex.Message);
+            return Results.Problem(
+                title: ex.Message,
+                detail: "Example format: http://localhost:8080/resize?u=<ImageUrl>&w=<ImageWidth>&h=<ImageHeight>&q=<ImageQuality>",
+                statusCode: (int)HttpStatusCode.BadRequest);
         }
     }
 }
