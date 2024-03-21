@@ -28,3 +28,7 @@ jobs:
           push: true
           file: ImageServer/Dockerfile
           tags: ghcr.io/devinsightforge/imageserverservice:latest
+          labels: |
+            maintainer=${{ github.repository_owner }}
+            repository=${{ github.repository }}
+            commit_sha=${{ github.sha }}
