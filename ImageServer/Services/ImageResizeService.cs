@@ -1,6 +1,6 @@
 ﻿using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Formats.Webp;
+using SixLabors.ImageSharp.Processing;
 using System.Net;
 
 namespace ImageServer.Services;
@@ -11,38 +11,33 @@ public class ImageResizeService(HttpClient httpClient)
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(imageUrl) || !Uri.IsWellFormedUriString(imageUrl, UriKind.Absolute))
-                throw new Exception("Invalid image URL.");
+            if (string.IsNullOrWhiteSpace(imageUrl) || !Uri.IsWellFormedUriString(imageUrl, UriKind.Absolute) || (!w.HasValue && !h.HasValue))
+                throw new ArgumentException("Invalid input parameters.");
 
-            if (!w.HasValue && !h.HasValue)
-                throw new Exception("Invalid dimensions for resizing.");
+            using var imageResponse = await httpClient.GetAsync(imageUrl);
 
-            if (q.HasValue && (q <= 0 || q > 100))
-                throw new Exception("Invalid quality value.");
+            if (!imageResponse.IsSuccessStatusCode)
+                throw new Exception("Failed to fetch the image.");
 
-            int width = w ?? 0;
-            int height = h ?? 0;
-            int quality = q ?? 75;
+            var contentType = imageResponse.Content.Headers.ContentType?.MediaType;
+            if (string.IsNullOrEmpty(contentType) || !contentType.StartsWith("image/"))
+                throw new InvalidOperationException("The URL does not point to a valid image file.");
 
-            var response = await httpClient.GetAsync(imageUrl);
-            if (!response.IsSuccessStatusCode)
-                throw new Exception("Failed to fetch image.");
-
-            using var image = await Image.LoadAsync(await response.Content.ReadAsStreamAsync());
-            image.Mutate(x => x.Resize(width, height));
+            using var imageStream = await imageResponse.Content.ReadAsStreamAsync();
+            using var image = await Image.LoadAsync(imageStream);
+            image.Mutate(x => x.Resize(w ?? 0, h ?? 0));
 
             var outputStream = new MemoryStream();
-            var encoder = new WebpEncoder { Quality = Math.Clamp(quality, 1, 100), SkipMetadata = true };
-            await image.SaveAsWebpAsync(outputStream, encoder);
+            await image.SaveAsWebpAsync(outputStream, new WebpEncoder { Quality = Math.Clamp(q ?? 75, 1, 100), SkipMetadata = true });
             outputStream.Position = 0;
 
-            return Results.Stream(outputStream, "image/webp");
+            return Results.Stream(outputStream, "image/jpeg");
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"An error occurred: {ex}");
             return Results.Problem(
-                title: ex.Message,
-                detail: "Example format: http://localhost:8080/resize?u=<ImageUrl>&w=<ImageWidth>&h=<ImageHeight>&q=<ImageQuality>",
+                detail: "Example format: http://<image-server>/?u=<[Required]ImageUrl>&w=<ImageWidth>&h=<ImageHeight>&q=<ImageQuality>",
                 statusCode: (int)HttpStatusCode.BadRequest);
         }
     }

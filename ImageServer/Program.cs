@@ -20,7 +20,14 @@ builder.Services.AddScoped<ImageResizeService>();
 var app = builder.Build();
 app.UseOutputCache();
 
-app.MapGet("/resize",async (
+app.UseCors(options =>
+{
+    options.AllowAnyHeader()
+           .AllowAnyMethod()
+           .AllowAnyOrigin();
+});
+
+app.MapGet("/", async (
     [FromQuery(Name = "u")] string? imageUrl,
     [FromQuery(Name = "w")] int? width,
     [FromQuery(Name = "h")] int? height,
