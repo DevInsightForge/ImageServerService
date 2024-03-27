@@ -31,7 +31,7 @@ public class ImageResizeService(HttpClient httpClient)
             await image.SaveAsWebpAsync(outputStream, new WebpEncoder { Quality = Math.Clamp(q ?? 75, 1, 100), SkipMetadata = true });
             outputStream.Position = 0;
 
-            return Results.Stream(outputStream, "image/jpeg");
+            return Results.Stream(outputStream, "image/webp");
         }
         catch (Exception ex)
         {

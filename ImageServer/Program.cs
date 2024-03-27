@@ -3,6 +3,7 @@ using ImageServer.Services;
 using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddCors();
 builder.Services.AddOutputCache(options =>
 {
     options.UseCaseSensitivePaths = false;
@@ -19,7 +20,6 @@ builder.Services.AddScoped<ImageResizeService>();
 
 var app = builder.Build();
 app.UseOutputCache();
-
 app.UseCors(options =>
 {
     options.AllowAnyHeader()
