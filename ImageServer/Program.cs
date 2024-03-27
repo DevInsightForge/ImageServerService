@@ -27,7 +27,7 @@ app.UseCors(options =>
            .AllowAnyOrigin();
 });
 
-app.MapGet("/", async (
+app.MapGet("/resize", async (
     [FromQuery(Name = "u")] string? imageUrl,
     [FromQuery(Name = "w")] int? width,
     [FromQuery(Name = "h")] int? height,
