@@ -32,9 +32,7 @@ app.MapGet("/resize", async (
     [FromQuery(Name = "w")] int? width,
     [FromQuery(Name = "h")] int? height,
     [FromQuery(Name = "q")] int? quality,
-    ImageResizeService resizeService) =>
-{
-    return await resizeService.ResizeImageAsync(imageUrl, width, height, quality);
-}).CacheOutput(options => options.SetVaryByQuery("*"));
+    ImageResizeService resizeService) => await resizeService.ResizeImageAsync(imageUrl, width, height, quality))
+    .CacheOutput(options => options.SetVaryByQuery("*"));
 
 app.Run();
