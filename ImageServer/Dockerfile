@@ -1,8 +1,3 @@
-FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS base
-USER app
-WORKDIR /app
-EXPOSE 8080
-
 FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
 RUN apk update && \
 	apk add --no-cache clang zlib-dev
