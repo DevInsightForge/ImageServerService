@@ -2,7 +2,7 @@ using ImageServer.Contexts;
 using ImageServer.Services;
 using Microsoft.AspNetCore.Mvc;
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateSlimBuilder(args);
 builder.Services.AddCors();
 builder.Services.AddOutputCache(options =>
 {
