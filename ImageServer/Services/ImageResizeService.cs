@@ -2,6 +2,7 @@
 using SixLabors.ImageSharp.Formats.Webp;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Processing;
+using ImageServer.Models;
 
 namespace ImageServer.Services;
 
@@ -9,31 +10,36 @@ public class ImageResizeService(HttpClient httpClient)
 {
     private readonly HttpClient _httpClient = httpClient;
 
-    public async Task<IResult> ResizeImageAsync(string? imageUrl, int? width, int? height, int? quality, string? format)
+    public async Task<IResult> ResizeImageAsync(ResizeQueryParamsDto resizeParams)
     {
         try
         {
-            ValidateParameters(imageUrl, width, height);
+            ValidateParameters(resizeParams.ImageUrl, resizeParams.Width, resizeParams.Height);
 
-            using var imageResponse = await FetchImageAsync(imageUrl!);
+            using var imageResponse = await FetchImageAsync(resizeParams.ImageUrl!);
             var contentType = GetContentType(imageResponse);
 
-            if (IsSvg(contentType))
+            if (contentType == "image/svg+xml")
             {
                 return await ReturnSvgImageAsync(imageResponse);
             }
 
-            using var image = await LoadImageAsync(imageResponse);
-            ResizeImage(image, width, height);
+            using var imageStream = await imageResponse.Content.ReadAsStreamAsync();
+            using var image = await Image.LoadAsync(imageStream);
+
+            if (NeedsResize(image, resizeParams.Width, resizeParams.Height))
+            {
+                ResizeImage(image, resizeParams.Width, resizeParams.Height);
+            }
 
             var outputStream = new MemoryStream();
-            await SaveImageAsync(image, outputStream, quality, format);
+            await SaveImageAsync(image, outputStream, resizeParams.Quality, resizeParams.Format);
 
-            return Results.Stream(outputStream, GetMimeType(format));
+            return Results.Stream(outputStream, GetMimeType(resizeParams.Format));
         }
         catch
         {
-            return Results.BadRequest("Example: http://<image-server>/?u=<[Required]ImageUrl>&w=<ImageWidth>&h=<ImageHeight>&q=<ImageQuality>&f=<jpg,png,webp>");
+            return Results.BadRequest("Example: http://<image-server>/?u=<[Required]ImageUrl>&w=<ImageWidth>&h=<ImageHeight>&q=<ImageQuality>&f=<webp(default),jpg,png>");
         }
     }
 
@@ -47,7 +53,7 @@ public class ImageResizeService(HttpClient httpClient)
 
     private async Task<HttpResponseMessage> FetchImageAsync(string imageUrl)
     {
-        var response = await _httpClient.GetAsync(imageUrl);
+        var response = await _httpClient.GetAsync(imageUrl, HttpCompletionOption.ResponseHeadersRead); // Stream directly
         if (!response.IsSuccessStatusCode)
         {
             throw new InvalidOperationException("Failed to fetch the image.");
@@ -65,26 +71,26 @@ public class ImageResizeService(HttpClient httpClient)
         return contentType;
     }
 
-    private static bool IsSvg(string? contentType)
-    {
-        return contentType == "image/svg+xml";
-    }
-
     private static async Task<IResult> ReturnSvgImageAsync(HttpResponseMessage imageResponse)
     {
         var svgStream = await imageResponse.Content.ReadAsStreamAsync();
         return Results.Stream(svgStream, "image/svg+xml");
     }
 
-    private static async Task<Image> LoadImageAsync(HttpResponseMessage imageResponse)
+    private static bool NeedsResize(Image image, int? width, int? height)
     {
-        using var imageStream = await imageResponse.Content.ReadAsStreamAsync();
-        return await Image.LoadAsync(imageStream);
+        return (width.HasValue && width.Value != image.Width) || (height.HasValue && height.Value != image.Height);
     }
 
     private static void ResizeImage(Image image, int? width, int? height)
     {
-        image.Mutate(x => x.Resize(width ?? 0, height ?? 0));
+        var currentWidth = image.Width;
+        var currentHeight = image.Height;
+
+        if ((width.HasValue && currentWidth >= width.Value) || (height.HasValue && currentHeight >= height.Value))
+        {
+            image.Mutate(x => x.Resize(width ?? currentWidth, height ?? currentHeight));
+        }
     }
 
     private static async Task SaveImageAsync(Image image, Stream outputStream, int? quality, string? format)

@@ -1,18 +1,14 @@
-using ImageServer.Contexts;
+using ImageServer.Models;
 using ImageServer.Services;
-using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateSlimBuilder(args);
 builder.Services.AddCors();
+builder.Services.AddProblemDetails();
 builder.Services.AddOutputCache(options =>
 {
     options.UseCaseSensitivePaths = false;
     options.DefaultExpirationTimeSpan = TimeSpan.FromDays(1);
     options.AddBasePolicy(policy => policy.SetVaryByQuery("*"));
-});
-builder.Services.ConfigureHttpJsonOptions(options =>
-{
-    options.SerializerOptions.TypeInfoResolverChain.Insert(0, CustomJsonSerializerContext.Default);
 });
 
 builder.Services.AddHttpClient<ImageResizeService>();
@@ -27,13 +23,8 @@ app.UseCors(options =>
            .AllowAnyOrigin();
 });
 
-app.MapGet("/resize", async (
-    [FromQuery(Name = "u")] string? imageUrl,
-    [FromQuery(Name = "w")] int? width,
-    [FromQuery(Name = "h")] int? height,
-    [FromQuery(Name = "q")] int? quality,
-    [FromQuery(Name = "f")] string? format,
-    ImageResizeService resizeService) => await resizeService.ResizeImageAsync(imageUrl, width, height, quality, format))
-    .CacheOutput(options => options.SetVaryByQuery("*"));
+app.MapGet("/resize", async ([AsParameters] ResizeQueryParamsDto queryParams, ImageResizeService resizeService) => 
+    await resizeService.ResizeImageAsync(queryParams))
+    .CacheOutput();
 
 await app.RunAsync();
