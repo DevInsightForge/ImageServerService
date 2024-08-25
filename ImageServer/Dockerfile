@@ -8,11 +8,11 @@ COPY ["ImageServer/ImageServer.csproj", "ImageServer/"]
 RUN dotnet restore "./ImageServer/ImageServer.csproj"
 COPY . .
 WORKDIR "/src/ImageServer"
-RUN dotnet build "./ImageServer.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN dotnet build "./ImageServer.csproj" -c "$BUILD_CONFIGURATION" -o /app/build
 
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./ImageServer.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=true
+RUN dotnet publish "./ImageServer.csproj" -c "$BUILD_CONFIGURATION" -o /app/publish /p:UseAppHost=true
 
 FROM mcr.microsoft.com/dotnet/runtime-deps:8.0-alpine AS final
 WORKDIR /app
