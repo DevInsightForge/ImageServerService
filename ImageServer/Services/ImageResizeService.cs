@@ -27,10 +27,7 @@ public class ImageResizeService(HttpClient httpClient)
             using var imageStream = await imageResponse.Content.ReadAsStreamAsync();
             using var image = await Image.LoadAsync(imageStream);
 
-            if (NeedsResize(image, resizeParams.Width, resizeParams.Height))
-            {
-                ResizeImage(image, resizeParams.Width, resizeParams.Height);
-            }
+            image.Mutate(x => x.Resize(resizeParams.Width ?? 0, resizeParams.Height ?? 0));
 
             var outputStream = new MemoryStream();
             await SaveImageAsync(image, outputStream, resizeParams.Quality, resizeParams.Format);
@@ -75,22 +72,6 @@ public class ImageResizeService(HttpClient httpClient)
     {
         var svgStream = await imageResponse.Content.ReadAsStreamAsync();
         return Results.Stream(svgStream, "image/svg+xml");
-    }
-
-    private static bool NeedsResize(Image image, int? width, int? height)
-    {
-        return (width.HasValue && width.Value != image.Width) || (height.HasValue && height.Value != image.Height);
-    }
-
-    private static void ResizeImage(Image image, int? width, int? height)
-    {
-        var currentWidth = image.Width;
-        var currentHeight = image.Height;
-
-        if ((width.HasValue && currentWidth >= width.Value) || (height.HasValue && currentHeight >= height.Value))
-        {
-            image.Mutate(x => x.Resize(width ?? currentWidth, height ?? currentHeight));
-        }
     }
 
     private static async Task SaveImageAsync(Image image, Stream outputStream, int? quality, string? format)
